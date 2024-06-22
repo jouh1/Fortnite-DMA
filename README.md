@@ -1,7 +1,7 @@
 FORTNITE DMA
 _______________________________________________________________________
 
-Updated offsets to lastest game version
+Updated offsets to lastest game version 22/06/2024 
 
 Features
 
