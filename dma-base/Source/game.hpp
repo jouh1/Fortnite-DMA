@@ -18,18 +18,21 @@ struct EntityData {
     float boxLeft, boxRight;
 };
 std::vector<EntityData> entities;
-std::atomic<bool> running(true);
-std::atomic<int> player_count(0);
-std::mutex data_mutex;
 
 void bases() {
-    while (running) {
+    while (true)
+    {
+        // New UWorld
+
         __int64 va_text = 0;
         for (int i = 0; i < 25; i++) {
             if (mem.Read<__int32>(cache::base + (i * 0x1000) + 0x250) == 0x260E020B) {
                 va_text = cache::base + ((i + 1) * 0x1000);
             }
         }
+
+        // Reads
+
         cache::uworld = mem.Read<__int64>(offsets::UWORLD + va_text);
         cache::game_instance = mem.Read<uintptr_t>(cache::uworld + offsets::GAME_INSTANCE);
         cache::local_players = mem.Read<uintptr_t>(mem.Read<uintptr_t>(cache::game_instance + offsets::LOCAL_PLAYERS));
@@ -45,18 +48,21 @@ void bases() {
 
         cache::game_state = mem.Read<uintptr_t>(cache::uworld + offsets::GAME_STATE);
         cache::player_array = mem.Read<uintptr_t>(cache::game_state + offsets::PLAYER_ARRAY);
-        player_count.store(mem.Read<int>(cache::game_state + (offsets::PLAYER_ARRAY + sizeof(uintptr_t))));
+        cache::player_count = mem.Read<int>(cache::game_state + (offsets::PLAYER_ARRAY + sizeof(uintptr_t)));
         std::this_thread::sleep_for(std::chrono::milliseconds(2500));
     }
 }
 
-void actorloop() {
-    while (running) {
-        std::vector<EntityData> temp_entities;
-        int count = player_count.load();
-        temp_entities.reserve(count);
+void actorloop()
+{
+    while (true)
+    {
+        auto start_time = std::chrono::high_resolution_clock::now();
 
-        for (int i = 0; i < count; i++) {
+        std::vector<EntityData> temp_entities;
+        temp_entities.clear();
+
+        for (int i = 0; i < cache::player_count; i++) {
             uintptr_t player_state = mem.Read<uintptr_t>(cache::player_array + (i * sizeof(uintptr_t)));
             if (!player_state) continue;
 
@@ -69,37 +75,30 @@ void actorloop() {
             uintptr_t mesh = mem.Read<uintptr_t>(pawn_private + offsets::MESH);
             if (!mesh) continue;
 
-            Vector3 Velocity = mem.Read<Vector3>(cache::root_component + 0x168);
-
-            Vector3 ReticleLocation = mem.Read<Vector3>(cache::player_controller + offsets::LocationUnderReticle);
+            if (!in_screen(project_world_to_screen(get_entity_bone(mesh, bone::BONE_PELVIS)))) continue;
 
             EntityData entity;
             entity.mesh = mesh;
-            entity.Velocity = Velocity;
-            entity.ReticleLocation = ReticleLocation;
-            cache::player_count = count;
             temp_entities.push_back(entity);
         }
-        {
-            std::lock_guard<std::mutex> lock(data_mutex);
-            entities = std::move(temp_entities);
-        }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        entities = temp_entities;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        auto end_time = std::chrono::high_resolution_clock::now(); // FPS is the loop time in a readable form.
+        std::chrono::duration<double> elapsed = end_time - start_time;
+        settings::framerate = 1.0 / elapsed.count();
     }
 }
 
-bool IsShootable(Vector3 lur, Vector3 wl) {
-    return (lur.x >= wl.x - 20 && lur.x <= wl.x + 20 && lur.y >= wl.y - 20 && lur.y <= wl.y + 20);
-}
-
 void draw_entities() {
-    std::lock_guard<std::mutex> lock(data_mutex);
 
+    Vector3 closest_head;
     float closest_distance = FLT_MAX;
-    cache::closest_mesh = NULL;
 
     for (const auto& entity : entities) {
+
+        // Bones 
         Vector3 head3d = get_entity_bone(entity.mesh, bone::BONE_HEAD);
         Vector2 head2d = project_world_to_screen(head3d);
         Vector3 bottom3d = get_entity_bone(entity.mesh, 0);
@@ -109,9 +108,12 @@ void draw_entities() {
         int box_width = static_cast<int>(box_height * 0.50f);
         float distance = cache::relative_location.distance(bottom3d) / 100.0f;
 
-        ImColor box_color = is_visible(entity.mesh)
+
+        ImColor box_color = is_visible(entity.mesh) // Check vis color edit
             ? ImColor(settings::visuals::boxColor[0], settings::visuals::boxColor[1], settings::visuals::boxColor[2], settings::visuals::boxColor[3])
             : ImColor(settings::visuals::boxColor2[0], settings::visuals::boxColor2[1], settings::visuals::boxColor2[2], settings::visuals::boxColor2[3]);
+
+        // ESP
 
         if (settings::visuals::box) {
             draw_cornered_box(head2d.x - (box_width / 2), head2d.y, box_width, box_height, box_color, 1);
@@ -131,41 +133,36 @@ void draw_entities() {
             draw_distance(bottom2d, distance, ImColor(250, 250, 250, 250));
         }
 
-        float fov_radius = settings::aimbot::fov;
-        Vector2 screen_center = Vector2(settings::screen_center_x, settings::screen_center_y);
+        // Aimbot
 
+        Vector2 screen_center = Vector2(settings::screen_center_x, settings::screen_center_y);
+        float fov_radius = settings::aimbot::fov;
         double dx = head2d.x - screen_center.x;
         double dy = head2d.y - screen_center.y;
         float dist = sqrtf(dx * dx + dy * dy);
 
         if (dist <= fov_radius && dist < closest_distance) {
-            cache::closest_distance = dist;
-            cache::closest_mesh = entity.mesh;
+            closest_distance = dist;
+            closest_head = head3d;
         }
 
-        if (settings::aimbot::enable && cache::closest_mesh) {
-            if (cache::player_count > 1) {
+        if (settings::aimbot::enable) {
+            Vector3 Velocity = mem.Read<Vector3>(cache::root_component + 0x168);
                 if (is_visible(entity.mesh)) {
-                Vector3 Predictor = Prediction(head3d, entity.Velocity, cache::closest_distance, 70000);
-                Vector2 hitbox_screen_predict = project_world_to_screen(Predictor);
-                move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+                    do_aimbot(closest_head, entity.Velocity, closest_distance);
                 }
             }
-        }
-            if (settings::aimbot::triggerbot) {
-            if (IsShootable(entity.ReticleLocation, head3d)) {
-               kmBox::kmclick();
-            }
-            else
-            {
-                int isdown = 0;
-                kmNet_mouse_left(isdown);
+        
+        if (settings::aimbot::triggerbot) {
+            Vector3 ReticleLocation = mem.Read<Vector3>(cache::player_controller + offsets::LocationUnderReticle);
+            if (IsShootable(entity.ReticleLocation, closest_head)) {
+                do_triggerbot();
             }
         }
     }
 }
 
-
+// Render
 
 WPARAM render_loop() {
     ZeroMemory(&messager, sizeof(MSG));

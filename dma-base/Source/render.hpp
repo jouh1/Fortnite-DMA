@@ -232,7 +232,7 @@ void render_menu()
     {
         ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
         ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text("FPS: %.2f", io.Framerate);
+        ImGui::Text("FPS: %.2f", settings::framerate);
         ImGui::End();
     }
 

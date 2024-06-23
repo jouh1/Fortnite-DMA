@@ -172,6 +172,7 @@ struct FNRot {
 };
 
 namespace cache {
+    inline uintptr_t base;
     inline uintptr_t uworld;
     inline uintptr_t game_instance;
     inline uintptr_t local_players;
@@ -180,34 +181,15 @@ namespace cache {
     inline uintptr_t root_component;
     inline uintptr_t player_state;
     inline Vector3 relative_location;
-    inline int my_team_id;
     inline uintptr_t game_state;
     inline uintptr_t player_array;
-    inline int player_count;
-    inline float closest_distance;
     inline uintptr_t pawn_private;
     inline uintptr_t closest_mesh;
-    inline uintptr_t box_width;
-    inline uintptr_t box_height;
-    inline uintptr_t mesh; 
-    inline uintptr_t LocationPointer;
-    inline uintptr_t RotationPointer;
-    inline int player_team_id;
-    inline uintptr_t overlapping;
     inline Camera local_camera;
-    inline uintptr_t base;
-    inline Vector3 head3d;
-    inline Vector3 neck3d;
-    inline Vector3 bottom3d;
-    inline Vector3 Predictor;
-    inline Vector3 Velocity;
-    inline Vector2 head2d;
-    inline Vector2 neck2d;
-    inline Vector2 hitbox_screen_predict;
-    static Vector2 bottom2d;
-    inline Vector2 target = { 0, 0 };
-    static float distance;
-    inline Vector3 location;
+    inline int player_count;
+    inline int my_team_id;
+    inline float closest_distance;
+
 }
 
 Camera get_view_point() {
@@ -268,7 +250,7 @@ bool is_visible(uintptr_t mesh) {
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
 }
 
-Vector3 Prediction(Vector3 TargetPosition, Vector3 ComponentVelocity, float player_distance, float ProjectileSpeed = 239) {
+Vector3 Prediction(Vector3 TargetPosition, Vector3 ComponentVelocity, float player_distance, float ProjectileSpeed) {
     float gravity = 3.5f;
     float TimeToTarget = player_distance / ProjectileSpeed;
     float bulletDrop = std::abs(gravity) * (TimeToTarget * TimeToTarget) * 0.5f;
@@ -369,3 +351,31 @@ std::string read_file(const std::string& filename, int line_number) {
     return "";
 }
 
+bool in_screen(Vector2 screen_position) {
+    if (screen_position.x > 0 && screen_position.x < settings::width && screen_position.y > 0 && screen_position.y < settings::height) return true;
+    else return false;
+}
+
+
+bool IsShootable(Vector3 lur, Vector3 wl) {
+    return (lur.x >= wl.x - 20 && lur.x <= wl.x + 20 && lur.y >= wl.y - 20 && lur.y <= wl.y + 20);
+}
+
+void do_aimbot(Vector3 head3d, Vector3 velocity, int dist) {
+
+    Vector3 Predictor = Prediction(head3d, velocity, dist, 70000);
+    Vector2 hitbox_screen_predict = project_world_to_screen(Predictor);
+
+    move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+}
+
+
+void do_triggerbot() {
+    if (settings::kmbox::kmboxb) {
+        kmBox::kmclick();
+    }
+    else if (settings::kmbox::kmboxnet) {
+        int isdown = 0;
+        kmNet_mouse_left(isdown);
+    }
+}

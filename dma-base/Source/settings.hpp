@@ -9,6 +9,7 @@ namespace settings
 	inline int tab = 0;
 	inline int rank;
 	inline int get_rank;
+	inline int framerate;
 
 	namespace aimbot
 	{
