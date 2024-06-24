@@ -57,8 +57,6 @@ void actorloop()
 {
     while (true)
     {
-        auto start_time = std::chrono::high_resolution_clock::now();
-
         std::vector<EntityData> temp_entities;
         temp_entities.clear();
 
@@ -84,10 +82,6 @@ void actorloop()
 
         entities = temp_entities;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-        auto end_time = std::chrono::high_resolution_clock::now(); // FPS is the loop time in a readable form.
-        std::chrono::duration<double> elapsed = end_time - start_time;
-        settings::framerate = 1.0 / elapsed.count();
     }
 }
 
