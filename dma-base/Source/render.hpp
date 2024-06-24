@@ -16,6 +16,35 @@ D3DPRESENT_PARAMETERS p_params = { NULL };
 MSG messager = { nullptr };
 HWND my_wnd = nullptr;
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+        return true;
+
+    switch (msg)
+    {
+    case WM_SIZE:
+        if (p_device != NULL && wParam != SIZE_MINIMIZED)
+        {
+            p_params.BackBufferWidth = LOWORD(lParam);
+            p_params.BackBufferHeight = HIWORD(lParam);
+            p_device->Reset(&p_params);
+        }
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
 
 HRESULT directx_init()
 {
@@ -42,10 +71,9 @@ HRESULT directx_init()
     ImGui::CreateContext();
     ImGui_ImplWin32_Init(my_wnd);
     ImGui_ImplDX9_Init(p_device);
-    //ImGui::GetIO().Fonts->AddFontFromFileTTF(include\font.otf, 18.0f);
-    load_settings_from_ini();
+    //ImGui::GetIO().Fonts->AddFontFromFileTTF("include/font.otf", 18.0f);
     style();
-    
+
     p_object->Release();
     return S_OK;
 }
@@ -54,11 +82,11 @@ void create_overlay()
 {
     WNDCLASSEXA wcex = {
         sizeof(WNDCLASSEXA),
+        CS_CLASSDC,
+        WindowProc,
         0,
-        DefWindowProcA,
         0,
-        0,
-        0,
+        GetModuleHandle(NULL),
         LoadIcon(0, IDI_APPLICATION),
         LoadCursor(0, IDC_ARROW),
         0,
@@ -87,43 +115,22 @@ void create_overlay()
     UpdateWindow(my_wnd);
 }
 
+
 void case0()
 {
     ImGui::Checkbox("Enable Aimbot", &settings::aimbot::enable);
-    if (settings::aimbot::enable)
+    if (settings::aimbot::enable)  
     {
-        if (ImGui::Checkbox("Kmbox B+", &settings::kmbox::kmboxb))
-        {
-            if (!kmBox::init())
-            {
-                settings::kmbox::kmboxb = false;
-            }
+        if (!settings::kmbox::kmboxb || settings::kmbox::kmboxnet) {
+            ImGui::Text("Please select kmbox type in misc first");
         }
-
-        if (ImGui::Checkbox("Kmbox Net", &settings::kmbox::kmboxnet))
-        {
-            std::string ip = read_file("kmnet.txt", 1);
-            std::string port = read_file("kmnet.txt", 2);
-            std::string uuid = read_file("kmnet.txt", 3);
-
-            strncpy(settings::kmbox::kmbox_ip, ip.c_str(), sizeof(settings::kmbox::kmbox_ip) - 1);
-            settings::kmbox::kmbox_ip[sizeof(settings::kmbox::kmbox_ip) - 1] = '\0';
-
-            strncpy(settings::kmbox::kmbox_port, port.c_str(), sizeof(settings::kmbox::kmbox_port) - 1);
-            settings::kmbox::kmbox_port[sizeof(settings::kmbox::kmbox_port) - 1] = '\0';
-
-            strncpy(settings::kmbox::kmbox_uuid, uuid.c_str(), sizeof(settings::kmbox::kmbox_uuid) - 1);
-            settings::kmbox::kmbox_uuid[sizeof(settings::kmbox::kmbox_uuid) - 1] = '\0';
-
-            kmNet_init(settings::kmbox::kmbox_ip, settings::kmbox::kmbox_port, settings::kmbox::kmbox_uuid);
-        }
-        if ((settings::kmbox::kmboxb) || (settings::kmbox::kmboxnet))
+        else
         {
             settings::aimbot::scaledProjectileSpeed = settings::aimbot::projectileSpeed * 1000.0f;
             ImGui::Checkbox("Show FOV Circle", &settings::aimbot::show_fov);
             if (settings::aimbot::show_fov) {
-            ImGui::SameLine();
-            ImGui::ColorEdit4("Fov Color", settings::aimbot::fovColor, ImGuiColorEditFlags_NoInputs);
+                ImGui::SameLine();
+                ImGui::ColorEdit4("Fov Color", settings::aimbot::fovColor, ImGuiColorEditFlags_NoInputs);
             }
             ImGui::Checkbox("Triggerbot", &settings::aimbot::triggerbot);
             ImGui::SliderFloat("FOV Radius", &settings::aimbot::fov, 50.0f, 300.0f, "%.2f");
@@ -171,13 +178,13 @@ void case2()
         SetLayeredWindowAttributes(my_wnd, RGB(0, 0, 0), 255, LWA_ALPHA);
     }
 
+    ImGui::Text("ISLE DMA Free Version");
+    ImGui::Text("discord.gg/6RDv4Ha4yX");
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() - ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y);
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 130);
     if (ImGui::Button("Close", { 120, 20 })) exit(0);
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() - ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y);
     ImGui::SetCursorPosX(10);
-    if (ImGui::Button("Save Config", { 120, 20 })) save_settings_to_ini();
-    ImGui::SameLine();
     if (ImGui::Button("KmBox Debug", { 120, 20 })) {
         settings::debug::showDebugOptions = true;
     }
@@ -195,22 +202,18 @@ void case2()
             ImGui::Text("Select kmbox type\nin aimbot section.");
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
             if (ImGui::Button("Test KmboxB move", { 150, 20 })) {
-                ImGui::Text("Mouse should've moved");
                 kmBox::sendMove(50, 50);
             }
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
             if (ImGui::Button("Test KmboxB click", { 150, 20 })) {
-                ImGui::Text("Mouse should've moved");
                 kmBox::kmclick();
             }
             ImGui::Dummy(ImVec2(0.0f, 10.0f)); 
             if (ImGui::Button("Test Kmbox.NET move", { 150, 20 })) {
-                ImGui::Text("Mouse should've moved");
                 kmNet_mouse_move(50, 50);
             }
             ImGui::Dummy(ImVec2(0.0f, 10.0f)); 
             if (ImGui::Button("Test Kmbox.NET click", { 150, 20 })) {
-                ImGui::Text("Mouse should've moved");
                 int down = 0;
                 kmNet_mouse_left(down);
             }
@@ -224,6 +227,55 @@ void case2()
         }
         ImGui::PopStyleVar();
     }       
+    ImGui::SameLine();
+    if (ImGui::Button("Select kmbox type", { 140, 20 })) settings::kmbox::select = true;
+    ImGui::SameLine();
+    if (settings::kmbox::select) {
+        ImGui::OpenPopup("Kmbox Settings");
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - 400) / 2, (io.DisplaySize.y - 300) / 2));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+        if (ImGui::BeginPopupModal("Kmbox Settings", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Dummy(ImVec2(0.0f, 7.5f));
+            if (ImGui::Button("Kmbox B+", { 200, 20 })) {
+                if (!kmBox::init()) {
+                    std::cout << "Failed to connect to KmBox B+" << std::endl;
+                }
+                else {
+                    settings::kmbox::kmboxb = true;
+                }
+            }
+            ImGui::Dummy(ImVec2(0.0f, 7.5f));
+            if (ImGui::Button("Kmbox .NET", { 200, 20 })) settings::kmbox::shownet = true;
+            if (settings::kmbox::shownet) {
+                ImGui::Dummy(ImVec2(0.0f, 7.5f));
+                ImGui::SetNextItemWidth(170);
+                ImGui::InputText("Ip", settings::kmbox::ip, IM_ARRAYSIZE(settings::kmbox::ip));
+                ImGui::Dummy(ImVec2(0.0f, 7.5f));
+                ImGui::SetNextItemWidth(170);
+                ImGui::InputText("Port", settings::kmbox::port, IM_ARRAYSIZE(settings::kmbox::port));
+                ImGui::Dummy(ImVec2(0.0f, 7.5f));
+                ImGui::SetNextItemWidth(170);
+                ImGui::InputText("UUID", settings::kmbox::uuid, IM_ARRAYSIZE(settings::kmbox::uuid));
+                ImGui::Dummy(ImVec2(0.0f, 7.5f));
+                if (ImGui::Button("Connect to .NET", { 200, 20 })) {
+                    if (~kmNet_init(settings::kmbox::ip, settings::kmbox::port, settings::kmbox::uuid)) {
+                        std::cout << "Failed to connect to KmBox .NET" << std::endl;
+                    }
+                    else {
+                        settings::kmbox::kmboxnet = true;
+                    }
+                }
+            }
+            ImGui::Dummy(ImVec2(0.0f, 7.5f));
+            if (ImGui::Button("Close", { 200, 20 })) {
+                settings::kmbox::select = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndPopup();
+        }
+    }
 }
 void render_menu()
 {
@@ -254,8 +306,8 @@ void render_menu()
     if (settings::show_menu)
     {
         ImGui::SetNextWindowSize({ 620, 350 });
-        ImGui::Begin("Jouh", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar);
-        ImGui::Text("JO\nUH");
+        ImGui::Begin("FREE", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar);
+        ImGui::Text("IS\nLE");
         ImGui::SameLine();
         if (ImGui::Button("Aimbot", { 190, 20 })) settings::tab = 0;
         ImGui::SameLine();
@@ -304,44 +356,4 @@ void draw_distance(const Vector2& location, float distance, const ImColor color)
     sprintf_s(dist, "%.fm", distance);
     ImVec2 text_size = ImGui::CalcTextSize(dist);
     ImGui::GetForegroundDrawList()->AddText(ImVec2(location.x - text_size.x / 2, location.y - text_size.y / 2), color, dist);
-}
-
-void skeleton(uintptr_t skeleton_mesh, const ImColor color)
-{
-        if (!skeleton_mesh || !settings::visuals::skeleton) return;
-
-        auto neck = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_HEAD));
-        auto chest = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_NECK));
-        auto left_shoulder = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LSHOULDER));
-        auto left_elbow = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LELBOW));
-        auto left_hand = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LHAND));
-        auto right_shoulder = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RSHOULDER));
-        auto right_elbow = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RELBOW));
-        auto right_hand = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RHAND));
-        auto pelvis = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_PELVIS));
-        auto left_hip = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LTHIGH));
-        auto left_knee = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LKNEE));
-        auto left_foot = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_LFOOT));
-        auto right_hip = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RTHIGH));
-        auto right_knee = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RKNEE));
-        auto right_foot = project_world_to_screen(get_entity_bone(skeleton_mesh, bone::BONE_RFOOT));
-
-        auto draw_list = ImGui::GetBackgroundDrawList();
-        auto thickness = settings::visuals::skeleton_thick + 2.5f;
-
-        draw_list->AddLine(ImVec2(neck.x, neck.y), ImVec2(chest.x, chest.y), color, thickness);
-        draw_list->AddLine(ImVec2(chest.x, chest.y), ImVec2(right_shoulder.x, right_shoulder.y), color, thickness);
-        draw_list->AddLine(ImVec2(left_shoulder.x, left_shoulder.y), ImVec2(chest.x, chest.y), color, thickness);
-        draw_list->AddLine(ImVec2(left_shoulder.x, left_shoulder.y), ImVec2(left_elbow.x, left_elbow.y), color, thickness);
-        draw_list->AddLine(ImVec2(left_elbow.x, left_elbow.y), ImVec2(left_hand.x, left_hand.y), color, thickness);
-        draw_list->AddLine(ImVec2(right_shoulder.x, right_shoulder.y), ImVec2(right_elbow.x, right_elbow.y), color, thickness);
-        draw_list->AddLine(ImVec2(right_elbow.x, right_elbow.y), ImVec2(right_hand.x, right_hand.y), color, thickness);
-        draw_list->AddLine(ImVec2(chest.x, chest.y), ImVec2(pelvis.x, pelvis.y), color, thickness);
-        draw_list->AddLine(ImVec2(pelvis.x, pelvis.y), ImVec2(left_hip.x, left_hip.y), color, thickness);
-        draw_list->AddLine(ImVec2(left_hip.x, left_hip.y), ImVec2(left_knee.x, left_knee.y), color, thickness);
-        draw_list->AddLine(ImVec2(left_knee.x, left_knee.y), ImVec2(left_foot.x, left_foot.y), color, thickness);
-        draw_list->AddLine(ImVec2(pelvis.x, pelvis.y), ImVec2(right_hip.x, right_hip.y), color, thickness);
-        draw_list->AddLine(ImVec2(right_hip.x, right_hip.y), ImVec2(right_knee.x, right_knee.y), color, thickness);
-        draw_list->AddLine(ImVec2(right_knee.x, right_knee.y), ImVec2(right_foot.x, right_foot.y), color, thickness);
-   
 }

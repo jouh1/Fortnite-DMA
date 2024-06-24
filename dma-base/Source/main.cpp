@@ -3,7 +3,7 @@
 
 int main()
 {
-    SetConsoleTitleA("Jouh DMA");
+    SetConsoleTitleA("ISLE FREE DMA");
     if (!mem.Init("FortniteClient-Win64-Shipping.exe", true, true)) {
         std::cout << "Failed to initialize DMA" << std::endl;
         return 1;
@@ -20,12 +20,6 @@ int main()
     create_overlay();
     std::thread base_thread(bases);
     std::thread actor_thread(actorloop);
-    HANDLE base_thread_handle = base_thread.native_handle();
-    HANDLE actor_thread_handle = actor_thread.native_handle();
-
-    SetThreadPriority(base_thread_handle, THREAD_PRIORITY_HIGHEST);
-    SetThreadPriority(actor_thread_handle, THREAD_PRIORITY_HIGHEST);
-
     base_thread.detach();
     actor_thread.detach();
     directx_init();

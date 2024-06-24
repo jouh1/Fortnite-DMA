@@ -365,8 +365,12 @@ void do_aimbot(Vector3 head3d, Vector3 velocity, int dist) {
 
     Vector3 Predictor = Prediction(head3d, velocity, dist, 70000);
     Vector2 hitbox_screen_predict = project_world_to_screen(Predictor);
-
-    move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+    if (settings::kmbox::kmboxb) {
+         move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+    }
+    else if (settings::kmbox::kmboxnet) {
+        kmNet_mouse_move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+    }
 }
 
 

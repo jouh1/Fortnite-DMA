@@ -46,12 +46,14 @@ namespace settings
 		inline bool kmboxb = false;
 		inline bool kmboxnet = false;
 		inline bool confirm = false;
-		char kmbox_ip[24] = "";
-		char kmbox_port[10] = "";
-		char kmbox_uuid[32] = "";
-		bool show_kmbox_details_popup = false;
-
+		inline bool show_kmbox_details_popup = false;
+		inline bool shownet = false;
+		inline bool select = false;
+		static char ip[128] = "";
+		static char port[128] = "";
+		static char uuid[128] = "";
 	}
+
 	namespace misc
 	{
 	inline bool zero_alpha = false;

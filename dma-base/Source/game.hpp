@@ -126,9 +126,6 @@ void draw_entities() {
         if (settings::visuals::line) {
             draw_line(bottom2d, box_color);
         }
-        if (settings::visuals::skeleton) {
-            skeleton(entity.mesh, box_color);
-        }
         if (settings::visuals::distance) {
             draw_distance(bottom2d, distance, ImColor(250, 250, 250, 250));
         }
