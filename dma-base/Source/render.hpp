@@ -119,14 +119,10 @@ void create_overlay()
 void case0()
 {
     ImGui::Checkbox("Enable Aimbot", &settings::aimbot::enable);
-    if (settings::aimbot::enable)  
+    if (settings::aimbot::enable)
     {
-        if (!settings::kmbox::kmboxb || settings::kmbox::kmboxnet) {
-            ImGui::Text("Please select kmbox type in misc first");
-        }
-        else
-        {
-            settings::aimbot::scaledProjectileSpeed = settings::aimbot::projectileSpeed * 1000.0f;
+        if (settings::kmbox::kmboxb || settings::kmbox::kmboxnet) {
+            ImGui::Checkbox("Hold Right Click", &settings::aimbot::key);
             ImGui::Checkbox("Show FOV Circle", &settings::aimbot::show_fov);
             if (settings::aimbot::show_fov) {
                 ImGui::SameLine();
@@ -135,6 +131,9 @@ void case0()
             ImGui::Checkbox("Triggerbot", &settings::aimbot::triggerbot);
             ImGui::SliderFloat("FOV Radius", &settings::aimbot::fov, 50.0f, 300.0f, "%.2f");
             ImGui::SliderFloat("Smoothness", &settings::aimbot::smoothness, 1.0f, 25.0f, "%.2f");
+        }
+        else {
+            ImGui::Text("Please select kmbox type in misc first");
         }
     }
 }
@@ -146,7 +145,6 @@ void case1()
     {
         ImGui::Checkbox("Box", &settings::visuals::box);
         ImGui::Checkbox("Fill Box", &settings::visuals::fill_box);
-        ImGui::Checkbox("Skeleton", &settings::visuals::skeleton);
         ImGui::Checkbox("Line", &settings::visuals::line);
         ImGui::Checkbox("Distance", &settings::visuals::distance);
         ImGui::ColorEdit4("Visible", settings::visuals::boxColor, ImGuiColorEditFlags_NoInputs);
@@ -157,7 +155,6 @@ void case1()
 
 void case2()
 {
-    ImGui::Checkbox("FPS", &settings::visuals::fps);
     ImGui::Checkbox("Transparent", &settings::misc::zero_alpha);
     bool colorUpdated = false;
     ImGui::Checkbox("Menu Colors", &settings::misc::color);
@@ -280,13 +277,6 @@ void case2()
 void render_menu()
 {
     ImGuiIO& io = ImGui::GetIO();
-    if (settings::visuals::fps)
-    {
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-        ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text("FPS: %.2f", settings::framerate);
-        ImGui::End();
-    }
 
     if (GetAsyncKeyState(VK_INSERT) & 1)
     {

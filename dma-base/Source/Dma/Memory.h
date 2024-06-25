@@ -1,7 +1,9 @@
 #pragma once
-#include <Pch.h>
+#include "pch.h"
 #include "InputManager.h"
 #include "Registry.h"
+#include "Shellcode.h"
+#include "../nt/structs.h"
 
 class Memory
 {
@@ -13,7 +15,7 @@ private:
 		HMODULE LEECHCORE = nullptr;
 	};
 
-	inline static LibModules modules{ };
+	static inline LibModules modules{ };
 
 	struct CurrentProcessInformation
 	{
@@ -23,11 +25,10 @@ private:
 		std::string process_name = "";
 	};
 
-	std::unordered_map<std::wstring, ULONG64> Modules;
-	inline static CurrentProcessInformation current_process{ };
+	static inline CurrentProcessInformation current_process{ };
 
-	inline static BOOLEAN DMA_INITIALIZED = FALSE;
-	inline static BOOLEAN PROCESS_INITIALIZED = FALSE;
+	static inline BOOLEAN DMA_INITIALIZED = FALSE;
+	static inline BOOLEAN PROCESS_INITIALIZED = FALSE;
 	/**
 	*Dumps the systems Current physical memory pages
 	*To a file so we can use it in our DMA (:
@@ -44,7 +45,10 @@ private:
 	*/
 	bool SetFPGA();
 
+	//shared pointer
 	std::shared_ptr<c_keys> key;
+	c_registry registry;
+	c_shellcode shellcode;
 
 	/*this->registry_ptr = std::make_shared<c_registry>(*this);
 	this->key_ptr = std::make_shared<c_keys>(*this);*/
@@ -58,6 +62,24 @@ public:
 	~Memory();
 
 	/**
+	* @brief Gets the registry object
+	* @return registry class
+	*/
+	c_registry GetRegistry() { return registry; }
+
+	/**
+	* @brief Gets the key object
+	* @return key class
+	*/
+	c_keys* GetKeyboard() { return key.get(); }
+
+	/**
+	* @brief Gets the shellcode object
+	* @return shellcode class
+	*/
+	c_shellcode GetShellcode() { return shellcode; }
+
+	/**
 	* brief Initializes the DMA
 	* This is required before any DMA operations can be done.
 	* @param process_name the name of the process
@@ -65,8 +87,6 @@ public:
 	* @return true if successful, false if not.
 	*/
 	bool Init(std::string process_name, bool memMap = true, bool debug = false);
-
-	c_keys* GetKeyboard() { return key.get(); }
 
 	/*This part here is things related to the process information such as Base daddy, Size ect.*/
 
@@ -99,11 +119,17 @@ public:
 
 
 	/**
+	* \brief Gets the process peb
+	* \return the process peb
+	*/
+	PEB GetProcessPeb();
+
+	/**
 	* brief Gets the base address of the process
 	* @param module_name the name of the module
 	* @return the base address of the process
 	*/
-	size_t GetBaseAddress(std::string module_name);
+	size_t GetBaseDaddy(std::string module_name);
 
 	/**
 	* brief Gets the base size of the process
@@ -161,9 +187,9 @@ public:
 	/**
 	 * \brief Writes memory to the process
 	 * \param address The address to write to
-	 * \param buffer The buffer to writeze of the buffer
+	 * \param buffer The buffer to write
+	 * \param size The size of the buffer
 	 * \return
-	 * \param size The si
 	 */
 	bool Write(uintptr_t address, void* buffer, size_t size) const;
 	bool Write(uintptr_t address, void* buffer, size_t size, int pid) const;
@@ -174,15 +200,15 @@ public:
 	 * \param value the value you'll write to the address
 	 */
 	template <typename T>
-	bool Write(void* address, T value)
+	void Write(void* address, T value)
 	{
-		return Write(address, &value, sizeof(T));
+		Write(address, &value, sizeof(T));
 	}
 
 	template <typename T>
-	bool Write(uintptr_t address, T value)
+	void Write(uintptr_t address, T value)
 	{
-		return Write(address, &value, sizeof(T));
+		Write(address, &value, sizeof(T));
 	}
 
 	/**
@@ -195,18 +221,6 @@ public:
 	bool Read(uintptr_t address, void* buffer, size_t size) const;
 	bool Read(uintptr_t address, void* buffer, size_t size, int pid) const;
 
-	/**
-	* brief Reads a chain of offsets from the address
-	* @param address The address to read from
-	* @param a vector of offset values to read through
-	* @return the value read from the chain
-	*/
-	uint64_t ReadChain(uint64_t base, const std::vector<uint64_t>& offsets)
-	{
-		uint64_t result = Read<uint64_t>(base + offsets.at(0));
-		for (int i = 1; i < offsets.size(); i++) result = Read<uint64_t>(result + offsets.at(i));
-		return result;
-	}
 	/**
 	* brief Reads memory from the process using a template
 	* @param address The address to read from
@@ -226,19 +240,6 @@ public:
 	T Read(uint64_t address)
 	{
 		return Read<T>(reinterpret_cast<void*>(address));
-	}
-
-	std::string ReadString(uint64_t address, size_t size = 32)
-	{
-		std::vector<char> buffer(size, 0); // Automatically manage memory and initialize buffer
-
-		if (!Read(address, buffer.data(), size))
-		{
-			return std::string(); // Return an empty string on read failure
-		}
-
-		// Construct a string using the buffer's data, stopping at the first null terminator if present
-		return std::string(buffer.data(), strnlen(buffer.data(), size));
 	}
 
 	/**
@@ -285,16 +286,6 @@ public:
 	 */
 	void AddScatterReadRequest(VMMDLL_SCATTER_HANDLE handle, uint64_t address, void* buffer, size_t size);
 	void AddScatterWriteRequest(VMMDLL_SCATTER_HANDLE handle, uint64_t address, void* buffer, size_t size);
-	template <typename T>
-	bool AddScatterWriteRequest(VMMDLL_SCATTER_HANDLE handle, uint64_t addr, T value) const
-	{
-		bool ret = !VMMDLL_Scatter_PrepareWrite(handle, addr, reinterpret_cast<PBYTE>(&value), sizeof(value));
-		if (!ret)
-		{
-		//	ERROR("failed to prepare scatter write at 0x%p\n", addr);
-		}
-		return ret;
-	}
 
 	/**
 	 * \brief Executes all prepared scatter requests, note if you created a scatter handle with a pid
@@ -304,8 +295,6 @@ public:
 	 */
 	void ExecuteReadScatter(VMMDLL_SCATTER_HANDLE handle, int pid = 0);
 	void ExecuteWriteScatter(VMMDLL_SCATTER_HANDLE handle, int pid = 0);
-	void ExecuteScatterRead(VMMDLL_SCATTER_HANDLE handle);
-	void ExecuteScatterWrite(VMMDLL_SCATTER_HANDLE handle);
 
 	/*the FPGA handle*/
 	VMM_HANDLE vHandle;

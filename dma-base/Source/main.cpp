@@ -9,11 +9,17 @@ int main()
         return 1;
     }
     system("CLS");
-    cache::base = mem.GetBaseAddress("FortniteClient-Win64-Shipping.exe");
+
+    cache::base = mem.GetBaseDaddy("FortniteClient-Win64-Shipping.exe");
+
     if (!init()) {
         printf("The gui was not initialized");
         Sleep(3000);
         exit(0);
+    }
+
+    if (!mem.GetKeyboard()->InitKeyboard()) {
+        printf("The keyboard was not initialized");
     }
 
     system("CLS");

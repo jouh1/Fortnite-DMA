@@ -16,14 +16,14 @@ namespace settings
 		inline bool enable = false;
 		inline bool triggerbot = false;
 		inline bool show_fov = false;
+		inline bool key = false;
 		inline float fov = 150;
 		inline float smoothness = 5;
 		float fovColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		inline bool prediction = false;
 		inline bool headbone = false;
 		inline bool chestbone = false;
-		float projectileSpeed = 60;
-		float scaledProjectileSpeed = 60000.0f;
+		inline bool softaim = false;
 	}
 
 	namespace visuals

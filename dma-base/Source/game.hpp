@@ -8,16 +8,13 @@
 #include <offsets.hpp>
 
 struct EntityData {
-    Vector2 bottom2d;
-    Vector2 head2d;
-    int box_width, box_height;
-    float distance;
     uintptr_t mesh;
-    Vector3 Velocity;
-    Vector3 ReticleLocation;
-    float boxLeft, boxRight;
+    uintptr_t actor;
 };
+
 std::vector<EntityData> entities;
+std::vector<EntityData> temp_entities;
+
 
 void bases() {
     while (true)
@@ -53,13 +50,12 @@ void bases() {
     }
 }
 
+
 void actorloop()
 {
     while (true)
     {
-        std::vector<EntityData> temp_entities;
         temp_entities.clear();
-
         for (int i = 0; i < cache::player_count; i++) {
             uintptr_t player_state = mem.Read<uintptr_t>(cache::player_array + (i * sizeof(uintptr_t)));
             if (!player_state) continue;
@@ -75,6 +71,9 @@ void actorloop()
 
             if (!in_screen(project_world_to_screen(get_entity_bone(mesh, bone::BONE_PELVIS)))) continue;
 
+            auto is_dying = (mem.Read<char>(pawn_private + offsets::IS_DYING) >> 3);
+            if (is_dying) continue;
+
             EntityData entity;
             entity.mesh = mesh;
             temp_entities.push_back(entity);
@@ -87,8 +86,8 @@ void actorloop()
 
 void draw_entities() {
 
-    Vector3 closest_head;
     float closest_distance = FLT_MAX;
+    uintptr_t closest_mesh = NULL;
 
     for (const auto& entity : entities) {
 
@@ -134,19 +133,19 @@ void draw_entities() {
 
         if (dist <= fov_radius && dist < closest_distance) {
             closest_distance = dist;
-            closest_head = head3d;
+            closest_mesh = entity.mesh;
         }
 
         if (settings::aimbot::enable) {
-            Vector3 Velocity = mem.Read<Vector3>(cache::root_component + 0x168);
-                if (is_visible(entity.mesh)) {
-                    do_aimbot(closest_head, entity.Velocity, closest_distance);
-                }
-            }
-        
+            Vector3 Velocity = mem.Read<Vector3>(closest_mesh + 0x168);
+            Vector3 target3d = Prediction(head3d, closest_distance, Velocity, 0, 0); // speed, grav... 
+            auto target = project_world_to_screen(target3d);
+            do_aimbot(target);
+        }
+           
         if (settings::aimbot::triggerbot) {
             Vector3 ReticleLocation = mem.Read<Vector3>(cache::player_controller + offsets::LocationUnderReticle);
-            if (IsShootable(entity.ReticleLocation, closest_head)) {
+            if (is_shootable(ReticleLocation, head3d)) {
                 do_triggerbot();
             }
         }

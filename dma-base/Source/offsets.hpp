@@ -20,5 +20,6 @@ namespace offsets {
 	inline uintptr_t BONE_ARRAY_CACHE = 0x600;
 	inline uintptr_t LAST_SUMBIT_TIME = 0x2E8;
 	inline uintptr_t LAST_SUMBIT_TIME_ON_SCREEN = 0x2F0;
-	inline uintptr_t LocationUnderReticle = 0x26A0;
+	inline uintptr_t LocationUnderReticle = 0x26B8;
+	inline uintptr_t IS_DYING = 0x758;
 }

@@ -250,15 +250,27 @@ bool is_visible(uintptr_t mesh) {
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
 }
 
-Vector3 Prediction(Vector3 TargetPosition, Vector3 ComponentVelocity, float player_distance, float ProjectileSpeed) {
-    float gravity = 3.5f;
-    float TimeToTarget = player_distance / ProjectileSpeed;
-    float bulletDrop = std::abs(gravity) * (TimeToTarget * TimeToTarget) * 0.5f;
-    return Vector3(
-        TargetPosition.x + TimeToTarget * ComponentVelocity.x,
-        TargetPosition.y + TimeToTarget * ComponentVelocity.y,
-        TargetPosition.z + TimeToTarget * ComponentVelocity.z + bulletDrop
-    );
+float custom_fabsf(float x) {
+
+    __m128 x_vec = _mm_set_ss(x);
+    x_vec = _mm_and_ps(x_vec, _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF)));
+    return _mm_cvtss_f32(x_vec);
+}
+
+Vector3 Prediction(Vector3 CurrentLocation, float Distance, Vector3 Velocity, float speed, float gravity) {
+
+    Vector3 CalculatedPosition = CurrentLocation;
+    if (!speed) return CalculatedPosition;
+
+    float TimeToTarget = Distance / custom_fabsf(speed);
+    float CalculatedBulletDrop = (((-2800) * 0.5f * (TimeToTarget))) * 10;
+
+    CalculatedPosition.x += Velocity.x * (TimeToTarget) * 120;
+    CalculatedPosition.y += Velocity.y * (TimeToTarget) * 120;
+    CalculatedPosition.z += Velocity.z * (TimeToTarget) * 120;
+    CalculatedPosition.z += custom_fabsf((-49000 / 50) * gravity) / 2.0f * (TimeToTarget * 25);
+
+    return CalculatedPosition;
 }
 
 void move(float x, float y) {
@@ -357,29 +369,52 @@ bool in_screen(Vector2 screen_position) {
 }
 
 
-bool IsShootable(Vector3 lur, Vector3 wl) {
+
+bool is_shootable(Vector3 lur, Vector3 wl) {
     return (lur.x >= wl.x - 20 && lur.x <= wl.x + 20 && lur.y >= wl.y - 20 && lur.y <= wl.y + 20);
 }
 
-void do_aimbot(Vector3 head3d, Vector3 velocity, int dist) {
 
-    Vector3 Predictor = Prediction(head3d, velocity, dist, 70000);
-    Vector2 hitbox_screen_predict = project_world_to_screen(Predictor);
-    if (settings::kmbox::kmboxb) {
-         move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+void do_aimbot(Vector2 target) {
+    if (settings::aimbot::key) {
+        if (mem.GetKeyboard()->IsKeyDown(VK_RBUTTON)) {
+            if (settings::kmbox::kmboxb) {
+                move(target.x, target.y);
+            }
+            if (settings::kmbox::kmboxnet) {
+                kmNet_mouse_move(target.x, target.y);
+
+            }
+        }
     }
-    else if (settings::kmbox::kmboxnet) {
-        kmNet_mouse_move(hitbox_screen_predict.x, hitbox_screen_predict.y);
+    else {
+        if (settings::kmbox::kmboxb) {
+            move(target.x, target.y);
+        }
+        if (settings::kmbox::kmboxnet) {
+            kmNet_mouse_move(target.x, target.y);
+        }
     }
 }
 
-
 void do_triggerbot() {
-    if (settings::kmbox::kmboxb) {
-        kmBox::kmclick();
+    bool isdown = false;
+    if (settings::aimbot::key) {
+        if (mem.GetKeyboard()->IsKeyDown(VK_RBUTTON)) {
+            if (settings::kmbox::kmboxb) {
+                kmBox::kmclick();
+            }
+            if (settings::kmbox::kmboxnet) {
+                kmNet_mouse_left(isdown);
+            }
+        }
     }
-    else if (settings::kmbox::kmboxnet) {
-        int isdown = 0;
-        kmNet_mouse_left(isdown);
+    else {
+    if (settings::kmbox::kmboxb) {
+            kmBox::kmclick();
+        }
+        if (settings::kmbox::kmboxnet) {
+            kmNet_mouse_left(isdown);
+        }
     }
 }

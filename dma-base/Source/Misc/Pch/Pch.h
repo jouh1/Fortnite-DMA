@@ -47,19 +47,20 @@ using json = nlohmann::json;
 
 #include <spdlog/spdlog.h>
 
-// Logging
-//#define DEBUG_INFO
+#define DEBUG_INFO
 #ifdef DEBUG_INFO
-#define INFO(fmt, ...) spdlog::info("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
-#define ERROR(fmt, ...) spdlog::error("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
-#define WARN(fmt, ...) spdlog::warn("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
-#define CRITICAL(fmt, ...) spdlog::critical("[{}:{}] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG(fmt, ...) std::printf(fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) std::wprintf(fmt, ##__VA_ARGS__)
 #else
-#define INFO(fmt, ...) spdlog::info(fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) spdlog::error(fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...) spdlog::warn(fmt, ##__VA_ARGS__)
-#define CRITICAL(fmt, ...) spdlog::critical(fmt, ##__VA_ARGS__)
+#define LOG
+#define LOGW
 #endif
+
+#define THROW_EXCEPTION
+#ifdef THROW_EXCEPTION
+#define THROW(fmt, ...) throw std::runtime_error(fmt, ##__VA_ARGS__)
+#endif
+
 
 #include "Memory.h"
 #include "InputManager.h"

@@ -6,8 +6,8 @@ class c_keys
 {
 private:
 	uint64_t gafAsyncKeyStateExport = 0;
-	uint8_t state_bitmap[64] { };
-	uint8_t previous_state_bitmap[256 / 8] { };
+	uint8_t state_bitmap[64]{ };
+	uint8_t previous_state_bitmap[256 / 8]{ };
 	uint64_t win32kbase = 0;
 
 	int win_logon_pid = 0;
