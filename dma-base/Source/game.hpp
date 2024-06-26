@@ -89,6 +89,7 @@ void draw_entities() {
 
     float closest_distance = FLT_MAX;
     uintptr_t closest_mesh = NULL;
+    Vector3 closest_head;
 
     for (const auto& entity : entities) {
 
@@ -133,20 +134,21 @@ void draw_entities() {
         float dist = sqrtf(dx * dx + dy * dy);
 
         if (dist <= fov_radius && dist < closest_distance) {
-            closest_distance = dist;
+            closest_distance = distance;
             closest_mesh = entity.mesh;
+            closest_head = head3d;
         }
 
         if (settings::aimbot::enable) {
             Vector3 Velocity = mem.Read<Vector3>(closest_mesh + 0x168);
-            Vector3 target3d = Prediction(head3d, closest_distance, Velocity, 0, 0); // speed, grav... 
+            Vector3 target3d = Prediction(closest_head, closest_distance, Velocity, 0, 1); // speed, grav... 
             auto target = project_world_to_screen(target3d);
             do_aimbot(target);
         }
            
         if (settings::aimbot::triggerbot) {
             Vector3 ReticleLocation = mem.Read<Vector3>(cache::player_controller + offsets::LocationUnderReticle);
-            if (is_shootable(ReticleLocation, head3d)) {
+            if (is_shootable(ReticleLocation, closest_head)) {
                 do_triggerbot();
             }
         }
