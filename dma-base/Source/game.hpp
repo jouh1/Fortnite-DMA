@@ -32,21 +32,12 @@ void bases() {
 
         cache::uworld = mem.Read<__int64>(offsets::UWORLD + va_text);
         cache::game_instance = mem.Read<uintptr_t>(cache::uworld + offsets::GAME_INSTANCE);
+        cache::game_state = mem.Read<uintptr_t>(cache::uworld + offsets::GAME_STATE);
         cache::local_players = mem.Read<uintptr_t>(mem.Read<uintptr_t>(cache::game_instance + offsets::LOCAL_PLAYERS));
         cache::player_controller = mem.Read<uintptr_t>(cache::local_players + offsets::PLAYER_CONTROLLER);
         cache::local_pawn = mem.Read<uintptr_t>(cache::player_controller + offsets::LOCAL_PAWN);
 
-        if (cache::local_pawn) {
-            cache::root_component = mem.Read<uintptr_t>(cache::local_pawn + offsets::ROOT_COMPONENT);
-            cache::relative_location = mem.Read<Vector3>(cache::root_component + offsets::RELATIVE_LOCATION);
-            cache::player_state = mem.Read<uintptr_t>(cache::local_pawn + offsets::PLAYER_STATE);
-            cache::my_team_id = mem.Read<int>(cache::player_state + offsets::TEAM_INDEX);
-        }
-
-        cache::game_state = mem.Read<uintptr_t>(cache::uworld + offsets::GAME_STATE);
-        cache::player_array = mem.Read<uintptr_t>(cache::game_state + offsets::PLAYER_ARRAY);
-        cache::player_count = mem.Read<int>(cache::game_state + (offsets::PLAYER_ARRAY + sizeof(uintptr_t)));
-        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -55,6 +46,16 @@ void actorloop()
 {
     while (true)
     {
+        if (cache::local_pawn) {
+            cache::root_component = mem.Read<uintptr_t>(cache::local_pawn + offsets::ROOT_COMPONENT);
+            cache::relative_location = mem.Read<Vector3>(cache::root_component + offsets::RELATIVE_LOCATION);
+            cache::player_state = mem.Read<uintptr_t>(cache::local_pawn + offsets::PLAYER_STATE);
+            cache::my_team_id = mem.Read<int>(cache::player_state + offsets::TEAM_INDEX);
+        }
+
+        cache::player_array = mem.Read<uintptr_t>(cache::game_state + offsets::PLAYER_ARRAY);
+        cache::player_count = mem.Read<int>(cache::game_state + (offsets::PLAYER_ARRAY + sizeof(uintptr_t)));
+
         temp_entities.clear();
         for (int i = 0; i < cache::player_count; i++) {
             uintptr_t player_state = mem.Read<uintptr_t>(cache::player_array + (i * sizeof(uintptr_t)));

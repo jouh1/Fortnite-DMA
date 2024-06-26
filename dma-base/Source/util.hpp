@@ -234,8 +234,7 @@ Vector2 project_world_to_screen(const Vector3& world_location) {
 
 Vector3 get_entity_bone(uintptr_t mesh, int bone_id) {
     uintptr_t bone_array = mem.Read<uintptr_t>(mesh + offsets::BONE_ARRAY);
-    if (bone_array == 0) bone_array = mem.Read<uintptr_t>(mesh + offsets::BONE_ARRAY_CACHE);
-
+    if (bone_array == NULL) bone_array = mem.Read<uintptr_t>(mesh + offsets::BONE_ARRAY + 0x10);
     FTransform bone = mem.Read<FTransform>(bone_array + (bone_id * 0x60));
     FTransform component_to_world = mem.Read<FTransform>(mesh + offsets::COMPONENT_TO_WORLD);
     D3DMATRIX matrix = matrix_multiplication(bone.to_matrix_with_scale(), component_to_world.to_matrix_with_scale());
