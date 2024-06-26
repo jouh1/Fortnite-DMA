@@ -141,7 +141,7 @@ void draw_entities() {
 
         if (settings::aimbot::enable) {
             Vector3 Velocity = mem.Read<Vector3>(closest_mesh + 0x168);
-            Vector3 target3d = Prediction(closest_head, closest_distance, Velocity, 0, 1); // speed, grav... 
+            Vector3 target3d = Prediction(closest_head, closest_distance, Velocity, settings::aimbot::speed, settings::aimbot::grav); // speed, grav... 
             auto target = project_world_to_screen(target3d);
             do_aimbot(target);
         }

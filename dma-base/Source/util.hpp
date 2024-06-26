@@ -272,48 +272,53 @@ Vector3 Prediction(Vector3 CurrentLocation, float Distance, Vector3 Velocity, fl
     return CalculatedPosition;
 }
 
-void move(float x, float y) {
+auto move(float x, float y) -> void {
+    Vector2 center(settings::width / 2, settings::height / 2);
+    Vector3 target(0, 0, 0);
 
-    Vector2 Target;
-    if (x != 0)
-    {
-        if (x > settings::screen_center_x)
-        {
-            Target.x = -(settings::screen_center_x - x);
-            Target.x /= settings::aimbot::smoothness;
-            if (Target.x + settings::screen_center_x > settings::screen_center_x * 2) Target.x = 0;
+    if (x != 0) {
+        if (x > center.x) {
+            target.x = -(center.x - x);
+            target.x /= (settings::aimbot::smoothness);
+            if (target.x + center.x > center.x * 2)
+                target.x = 0;
         }
 
-        if (x < settings::screen_center_x)
-        {
-            Target.x = x - settings::screen_center_x;
-            Target.x /= settings::aimbot::smoothness;
-            if (Target.x + settings::screen_center_x < 0) Target.x = 0;
+        if (x < center.x) {
+            target.x = x - center.x;
+            target.x /= (settings::aimbot::smoothness);
+            if (target.x + center.x < 0)
+                target.x = 0;
         }
     }
-    if (y != 0)
-    {
-        if (y > settings::screen_center_y)
-        {
-            Target.y = -(settings::screen_center_y - y);
-            Target.y /= settings::aimbot::smoothness;
-            if (Target.y + settings::screen_center_y > settings::screen_center_y * 2) Target.y = 0;
+    if (y != 0) {
+        if (y > center.y) {
+            target.y = -(center.y - y);
+            target.y /= (settings::aimbot::smoothness);
+            if (target.y + center.y > center.y * 2)
+                target.y = 0;
         }
 
-        if (y < settings::screen_center_y)
-        {
-            Target.y = y - settings::screen_center_y;
-            Target.y /= settings::aimbot::smoothness;
-            if (Target.y + settings::screen_center_y < 0) Target.y = 0;
+        if (y < center.y) {
+            target.y = y - center.y;
+            target.y /= (settings::aimbot::smoothness);
+            if (target.y + center.y < 0)
+                target.y = 0;
         }
     }
 
-    if (settings::kmbox::kmboxnet && settings::aimbot::enable) {
-        kmNet_mouse_move(Target.x, Target.y);
+    const float snapThreshold = 1.0f;
+    if (std::abs(target.x) < snapThreshold) {
+        target.x = 0;
     }
-    if (settings::kmbox::kmboxb && settings::aimbot::enable) {
-        kmBox::sendMove(Target.x, Target.y);
+    if (std::abs(target.y) < snapThreshold) {
+        target.y = 0;
     }
+    if (settings::kmbox::kmboxb)
+        kmBox::sendMove(target.x, target.y);
+
+    if (settings::kmbox::kmboxnet)
+        kmNet_mouse_move(target.x, target.y);
 }
 
 bool kmBox::init() {
@@ -381,7 +386,7 @@ void do_aimbot(Vector2 target) {
                 move(target.x, target.y);
             }
             if (settings::kmbox::kmboxnet) {
-                kmNet_mouse_move(target.x, target.y);
+                move(target.x, target.y);
 
             }
         }
@@ -391,7 +396,7 @@ void do_aimbot(Vector2 target) {
             move(target.x, target.y);
         }
         if (settings::kmbox::kmboxnet) {
-            kmNet_mouse_move(target.x, target.y);
+            move(target.x, target.y);
         }
     }
 }

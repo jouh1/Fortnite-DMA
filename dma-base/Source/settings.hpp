@@ -20,10 +20,9 @@ namespace settings
 		inline float fov = 150;
 		inline float smoothness = 5;
 		float fovColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		inline bool prediction = false;
+		inline float speed = 50000;
+		inline float grav = 2.5;
 		inline bool headbone = false;
-		inline bool chestbone = false;
-		inline bool softaim = false;
 	}
 
 	namespace visuals
