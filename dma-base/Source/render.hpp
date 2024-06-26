@@ -256,11 +256,11 @@ void case2()
                 ImGui::InputText("UUID", settings::kmbox::uuid, IM_ARRAYSIZE(settings::kmbox::uuid));
                 ImGui::Dummy(ImVec2(0.0f, 7.5f));
                 if (ImGui::Button("Connect to .NET", { 200, 20 })) {
-                    if (~kmNet_init(settings::kmbox::ip, settings::kmbox::port, settings::kmbox::uuid)) {
-                        std::cout << "Failed to connect to KmBox .NET" << std::endl;
+                    if (kmNet_init(settings::kmbox::ip, settings::kmbox::port, settings::kmbox::uuid) == 0) {
+                        settings::kmbox::kmboxnet = true;
                     }
                     else {
-                        settings::kmbox::kmboxnet = true;
+                        std::cout << "Failed to connect to KmBox .NET" << std::endl;
                     }
                 }
             }
