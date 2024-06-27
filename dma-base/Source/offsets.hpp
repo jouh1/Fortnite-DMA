@@ -1,6 +1,6 @@
 #pragma once
 namespace offsets {
-	inline uintptr_t UWORLD = 0x11558538; // I personally use 80085135
+	inline uintptr_t UWORLD = 0x117105C8; // I personally use 80085135
 	inline uintptr_t GAME_INSTANCE = 0x1D8;
 	inline uintptr_t LOCAL_PLAYERS = 0x38;
 	inline uintptr_t PLAYER_CONTROLLER = 0x30;
